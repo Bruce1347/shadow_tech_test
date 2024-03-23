@@ -1,7 +1,9 @@
 from sqlalchemy import ForeignKey, Integer, String, delete, select, event, func
 from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
+from datetime import datetime
 
-from src.database.common import BaseModel
+
+from src.database.common import BaseModel, LendingException
 from src.schemas.books import AuthorSchema, BookSchema
 from src.schemas.user import UserSchema
 
@@ -65,6 +67,8 @@ class Book(BaseModel):
 
     total_stock: Mapped[int] = mapped_column(Integer())
 
+    current_lends: Mapped[list["Lending"]] = relationship(back_populates="book")
+
     @classmethod
     def get(cls, book_id: int, session: Session) -> "Book | None":
         return session.execute(select(cls).filter(cls.id == book_id)).scalar()
@@ -112,6 +116,8 @@ class User(BaseModel):
     email: Mapped[str] = mapped_column(String())
     hashed_password: Mapped[str] = mapped_column(String())
 
+    current_lends: Mapped[list["Lending"]] = relationship(back_populates="user")
+
     @property
     def password(self):
         return self.hashed_password
@@ -127,3 +133,55 @@ class User(BaseModel):
         session.add(instance)
         return instance
 
+    @classmethod
+    def get(cls, username: str, session: Session) -> "User | None":
+        return session.execute(select(cls).where(cls.username == username)).scalar()
+
+    @classmethod
+    def authenticate(
+        cls, username: str, password: str, session: Session
+    ) -> "User | None":
+        user = cls.get(username, session)
+
+        if not user:
+            return
+
+        context = CryptContext(schemes=["bcrypt"])
+
+        if not context.verify(password, user.hashed_password):
+            return
+
+        return user
+
+
+class Lending(BaseModel):
+    __tablename__ = "lending"
+
+    id: Mapped[uuid.UUID] = mapped_column(default=uuid.uuid4, primary_key=True)
+
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user.id"), nullable=False)
+    book_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("book.id"), nullable=False)
+
+    start_time: Mapped[datetime] = mapped_column(nullable=False)
+    end_time: Mapped[datetime] = mapped_column(nullable=False)
+
+    user: Mapped[User] = relationship(back_populates="current_lends")
+    book: Mapped[Book] = relationship(back_populates="current_lends")
+
+
+@event.listens_for(Lending, "before_insert")
+def check_not_over_lending(mapper, session, instance):
+    query = (
+        select(Book.id, Book.total_stock, func.count(Lending.book_id))
+        .outerjoin(
+            Lending,
+            Lending.book_id == Book.id,
+        )
+        .where(
+            Book.id == instance.book_id,
+        )
+    )
+    _, total_stock, current_lendings = session.execute(query).one()
+
+    if current_lendings >= total_stock:
+        raise LendingException()

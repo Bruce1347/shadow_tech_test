@@ -5,3 +5,7 @@ class BaseModel(DeclarativeBase):
     """This class subclasses the DeclarativeBase based on SQLA's own tutorial."""
 
     pass
+
+
+class LendingException(Exception):
+    pass

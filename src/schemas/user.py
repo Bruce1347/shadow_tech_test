@@ -3,6 +3,11 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 
+class UserToken(BaseModel):
+    access_token: str
+    token_type: str
+
+
 class UserSchema(BaseModel):
     first_name: str | None
     last_name: str | None
@@ -13,6 +18,7 @@ class UserSchema(BaseModel):
 
 class UserCreationSchema(UserSchema):
     password: str
+
 
 class UserDumpSchema(UserSchema):
     id: UUID

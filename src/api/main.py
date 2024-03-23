@@ -57,11 +57,12 @@ def init_api(*, db_config=None):
     app = FastAPI()
 
     # Circular imports
-    from src.api import authors, books, user
+    from src.api import authors, books, user, lending
 
     app.include_router(books.router)
     app.include_router(authors.router)
     app.include_router(user.router)
+    app.include_router(lending.router)
 
     return app
 
