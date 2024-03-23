@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, Integer, String, delete, select
+from sqlalchemy import ForeignKey, Integer, String, delete, select, event, func
 from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
 from src.database.common import BaseModel
@@ -7,6 +7,7 @@ from src.schemas.user import UserSchema
 
 import uuid
 from passlib.context import CryptContext
+
 
 class Author(BaseModel):
     __tablename__ = "author"
@@ -40,9 +41,7 @@ class Author(BaseModel):
 
     @classmethod
     def get_authors_list(cls, session: Session) -> list["Author"]:
-        query = session.query(cls)
-
-        return session.execute(query).scalars().fetchall()
+        return session.execute(select(cls)).scalars().fetchall()
 
     @classmethod
     def create_object(cls, validated_data: AuthorSchema, session: Session):
@@ -68,11 +67,11 @@ class Book(BaseModel):
 
     @classmethod
     def get(cls, book_id: int, session: Session) -> "Book | None":
-        return session.execute(session.query(cls).filter(cls.id == book_id)).scalar()
+        return session.execute(select(cls).filter(cls.id == book_id)).scalar()
 
     @classmethod
     def get_all(cls, session: Session) -> "list[Book]":
-        return session.execute(session.query(cls)).scalars()
+        return session.execute(select(cls)).scalars()
 
     @classmethod
     def create(cls, validated_data: BookSchema, session: Session):

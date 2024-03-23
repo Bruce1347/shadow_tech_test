@@ -57,7 +57,7 @@ def get_author(
 @router.put("/{author_id}", status_code=int(HTTPStatus.OK))
 def update_author(
     author_id: int,
-    author: AuthorDumpSchema,
+    author: AuthorSchema,
     session: Annotated[Session, Depends(main.database_connection)],
 ) -> AuthorDumpSchema:
     db_author = Author.get(author_id, session)

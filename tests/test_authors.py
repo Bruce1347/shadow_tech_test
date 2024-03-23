@@ -4,6 +4,7 @@ from http import HTTPStatus
 import pytest
 
 from src.database.models import Author
+from sqlalchemy import select
 
 
 class TestCreateAuthor:
@@ -211,7 +212,7 @@ class TestUpdateAuthor:
         session.expire_all()
 
         # Check the changed data has been properly persisted
-        query = session.query(Author).filter(Author.id == author.id)
+        query = select(Author).filter(Author.id == author.id)
         db_object = session.execute(query).scalar()
 
         assert db_object.first_name == "James"
@@ -256,11 +257,7 @@ class TestUpdateAuthor:
         assert error_detail["loc"] == ["body", field_name]
         assert error_detail["msg"] == "Field required"
 
-    def test_update_author_wrong_id(
-        self,
-        test_client,
-        author_payload,
-    ):
+    def test_update_author_wrong_id(self, test_client, author_payload, session):
         response = test_client.put(
             "/author/1",
             json=author_payload,

@@ -7,7 +7,7 @@ from copy import deepcopy
 from sqlalchemy import select, func
 
 
-class TestCreateBooks:
+class TestCreateUser:
     @pytest.fixture
     def book_payload(self):
         yield {
@@ -80,7 +80,6 @@ class TestCreateBooks:
 
         assert error_detail["loc"] == ["body", missing_field]
         assert error_detail["msg"] == "Field required"
-
 
         query = select(func.count(User.id))
 
