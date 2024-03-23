@@ -3,7 +3,10 @@ from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
 from src.database.common import BaseModel
 from src.schemas.books import AuthorSchema, BookSchema
+from src.schemas.user import UserSchema
 
+import uuid
+from passlib.context import CryptContext
 
 class Author(BaseModel):
     __tablename__ = "author"
@@ -78,7 +81,7 @@ class Book(BaseModel):
         session.add(instance)
 
         return instance
-    
+
     @classmethod
     def exists(cls, book_id: int, session) -> bool:
         return session.query(select(cls).where(cls.id == book_id).exists()).scalar()
@@ -96,3 +99,32 @@ class Book(BaseModel):
         session.commit()
 
         return True
+
+
+class User(BaseModel):
+    __tablename__ = "user"
+
+    id: Mapped[uuid.UUID] = mapped_column(default=uuid.uuid4, primary_key=True)
+
+    first_name: Mapped[str | None] = mapped_column(String())
+    last_name: Mapped[str | None] = mapped_column(String())
+    username: Mapped[str] = mapped_column(String())
+    address: Mapped[str | None] = mapped_column(String())
+    email: Mapped[str] = mapped_column(String())
+    hashed_password: Mapped[str] = mapped_column(String())
+
+    @property
+    def password(self):
+        return self.hashed_password
+
+    @password.setter
+    def password(self, new_password):
+        context = CryptContext(schemes=["bcrypt"])
+        self.hashed_password = context.hash(new_password)
+
+    @classmethod
+    def create(cls, validated_data: UserSchema, session: Session):
+        instance = cls(**validated_data.model_dump())
+        session.add(instance)
+        return instance
+
