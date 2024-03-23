@@ -24,21 +24,21 @@ router = APIRouter(
 def get_authors(
     session: Annotated[Session, Depends(main.database_connection)],
 ) -> list[AuthorDumpSchema]:
-    db_authors = Author.get_authors_list(session)
+    authors = Author.get_authors_list(session)
 
-    return [AuthorDumpSchema.model_validate(db_author) for db_author in db_authors]
+    return [AuthorDumpSchema.model_validate(author) for author in authors]
 
 
 @router.post("/", status_code=int(HTTPStatus.CREATED))
 def create_author(
-    author: AuthorSchema,
+    author_payload: AuthorSchema,
     session: Annotated[Session, Depends(main.database_connection)],
 ) -> AuthorDumpSchema:
-    db_author = Author.create_object(author, session)
+    author = Author.create_object(author_payload, session)
 
     session.commit()
 
-    return AuthorDumpSchema.model_validate(db_author)
+    return AuthorDumpSchema.model_validate(author)
 
 
 @router.get("/{author_id}", status_code=int(HTTPStatus.OK))
@@ -46,32 +46,32 @@ def get_author(
     author_id: int,
     session: Annotated[Session, Depends(main.database_connection)],
 ) -> AuthorDumpSchema:
-    db_author = Author.get(author_id, session)
+    author = Author.get(author_id, session)
 
-    if not db_author:
+    if not author:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND)
 
-    return AuthorDumpSchema.model_validate(db_author)
+    return AuthorDumpSchema.model_validate(author)
 
 
 @router.put("/{author_id}", status_code=int(HTTPStatus.OK))
 def update_author(
     author_id: int,
-    author: AuthorSchema,
+    author_payload: AuthorSchema,
     session: Annotated[Session, Depends(main.database_connection)],
 ) -> AuthorDumpSchema:
-    db_author = Author.get(author_id, session)
+    author = Author.get(author_id, session)
 
-    if not db_author:
+    if not author:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND)
 
-    for attr in author.model_fields.keys():
-        setattr(db_author, attr, getattr(author, attr))
+    for attr in author_payload.model_fields.keys():
+        setattr(author, attr, getattr(author_payload, attr))
 
-    session.add(db_author)
+    session.add(author)
     session.commit()
 
-    return AuthorDumpSchema.model_validate(db_author)
+    return AuthorDumpSchema.model_validate(author)
 
 
 @router.delete("/{author_id}", status_code=int(HTTPStatus.NO_CONTENT))

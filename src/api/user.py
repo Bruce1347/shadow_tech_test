@@ -43,7 +43,7 @@ def get_logged_user(
     if not username:
         raise unauthorized_exception
 
-    user: User = User.get(username, session)
+    user: User | None = User.get(username, session)
 
     if not user:
         raise unauthorized_exception
@@ -56,10 +56,10 @@ def get_logged_user(
     status_code=int(HTTPStatus.CREATED),
 )
 def create_user(
-    user: UserCreationSchema,
+    user_payload: UserCreationSchema,
     session: Annotated[Session, Depends(main.database_connection)],
 ):
-    user: User = User.create(user, session)
+    user: User = User.create(user_payload, session)
 
     session.add(user)
     session.commit()

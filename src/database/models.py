@@ -43,7 +43,7 @@ class Author(BaseModel):
 
     @classmethod
     def get_authors_list(cls, session: Session) -> list["Author"]:
-        return session.execute(select(cls)).scalars().fetchall()
+        return list(session.execute(select(cls)).scalars().fetchall())
 
     @classmethod
     def create_object(cls, validated_data: AuthorSchema, session: Session):
@@ -75,7 +75,7 @@ class Book(BaseModel):
 
     @classmethod
     def get_all(cls, session: Session) -> "list[Book]":
-        return session.execute(select(cls)).scalars()
+        return list(session.execute(select(cls)).scalars())
 
     @classmethod
     def create(cls, validated_data: BookSchema, session: Session):
@@ -144,12 +144,12 @@ class User(BaseModel):
         user = cls.get(username, session)
 
         if not user:
-            return
+            return None
 
         context = CryptContext(schemes=["bcrypt"])
 
         if not context.verify(password, user.hashed_password):
-            return
+            return None
 
         return user
 

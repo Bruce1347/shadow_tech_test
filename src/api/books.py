@@ -46,12 +46,13 @@ def get_book(
     book_id: int,
     session: Annotated[Session, Depends(main.database_connection)],
 ) -> BookDumpSchema:
-    book: Book = Book.get(book_id, session)
+    book: Book | None = Book.get(book_id, session)
 
     if not book:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND)
-    
+
     return BookDumpSchema.model_validate(book)
+
 
 @router.put("/{book_id}", status_code=int(HTTPStatus.OK))
 def update_book(
@@ -59,11 +60,11 @@ def update_book(
     payload: BookSchema,
     session: Annotated[Session, Depends(main.database_connection)],
 ) -> BookDumpSchema:
-    book: Book = Book.get(book_id, session)
+    book: Book | None = Book.get(book_id, session)
 
     if not book:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND)
-    
+
     for attr in payload.model_fields.keys():
         setattr(book, attr, getattr(payload, attr))
 
@@ -71,6 +72,7 @@ def update_book(
     session.commit()
 
     return BookDumpSchema.model_validate(book)
+
 
 @router.delete("/{book_id}", status_code=int(HTTPStatus.NO_CONTENT))
 def delete_book(
@@ -81,5 +83,5 @@ def delete_book(
 
     if not book_deleted:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND)
-    
+
     return

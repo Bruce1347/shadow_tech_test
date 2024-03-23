@@ -28,10 +28,10 @@ def reserve_book(
     session: Annotated[Session, Depends(main.database_connection)],
     logged_user: Annotated[User, Depends(get_logged_user)],
 ) -> LendingSchema:
-    book: Book = Book.get(book_id, session)
+    book: Book | None = Book.get(book_id, session)
 
     if not book:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST)
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND)
 
     try:
         lending = Lending(
