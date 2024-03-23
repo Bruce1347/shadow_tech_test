@@ -64,9 +64,35 @@ class Book(BaseModel):
     total_stock: Mapped[int] = mapped_column(Integer())
 
     @classmethod
-    def create_object(cls, validated_data: BookSchema, session: Session):
+    def get(cls, book_id: int, session: Session) -> "Book | None":
+        return session.execute(session.query(cls).filter(cls.id == book_id)).scalar()
+
+    @classmethod
+    def get_all(cls, session: Session) -> "list[Book]":
+        return session.execute(session.query(cls)).scalars()
+
+    @classmethod
+    def create(cls, validated_data: BookSchema, session: Session):
         instance = cls(**validated_data.model_dump())
 
         session.add(instance)
 
         return instance
+    
+    @classmethod
+    def exists(cls, book_id: int, session) -> bool:
+        return session.query(select(cls).where(cls.id == book_id).exists()).scalar()
+
+    @classmethod
+    def delete(cls, book_id: int, session: Session) -> bool:
+        book_exists = cls.exists(book_id, session)
+        if not book_exists:
+            return False
+
+        query = delete(cls).where(cls.id == book_id)
+
+        session.execute(query)
+
+        session.commit()
+
+        return True

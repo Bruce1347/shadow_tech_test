@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 
 class AuthorSchema(BaseModel):
@@ -24,6 +24,9 @@ class BookSchema(BaseModel):
 
 
 class BookDumpSchema(BookSchema):
+    id: int
     author: AuthorDumpSchema
     available: int = 0
     borrowed: int = 0
+
+    model_config = ConfigDict(from_attributes=True)
