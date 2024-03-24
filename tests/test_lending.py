@@ -1,58 +1,11 @@
-import pytest
-
 from src.database.models import Author, Book, User, Lending
-from src.database.common import LendingException
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from fastapi.testclient import TestClient
 from src.authentication.utils import create_access_token
 from src.api import config
 from http import HTTPStatus
-
-
-class TestLendingListener:
-    def test_over_lending(self, session):
-        author = Author(
-            first_name="James S.A.",
-            last_name="Corey",
-        )
-        book = Book(
-            title="Leviathan Wakes",
-            author=author,
-            total_stock=2,
-        )
-        user = User(
-            username="bob",
-            email="bob@example.org",
-            password="h4xx3r",
-        )
-
-        session.add_all([author, book, user])
-        session.commit()
-
-        for i in range(2):
-            lending = Lending(
-                user=user,
-                book=book,
-                start_time=date(2024, 1, 1) + timedelta(days=15 * i),
-                end_time=date(2024, 1, 31) + timedelta(days=15 * i),
-            )
-            session.add(lending)
-            session.flush()
-
-        session.commit()
-
-        # Only two books are available, lending a third one is not possible
-        with pytest.raises(LendingException):
-            lending = Lending(
-                user=user,
-                book=book,
-                start_time=date(2024, 1, 1),
-                end_time=date(2024, 1, 31),
-            )
-            session.add(lending)
-            session.commit()
 
 
 class TestLending:
@@ -90,8 +43,12 @@ class TestLending:
         )
 
         headers = {"Authorization": f"Bearer {token}"}
+        payload = {
+            "start_time": (datetime.now() + timedelta(days=2)).isoformat(),
+            "end_time": (datetime.now() + timedelta(days=40)).isoformat(),
+        }
 
-        response = test_client.post(f"/lending/{book.id}", headers=headers)
+        response = test_client.post(f"/lending/{book.id}", json=payload, headers=headers)
 
         assert response.status_code == HTTPStatus.OK
 
@@ -126,8 +83,20 @@ class TestLending:
             author=author,
             total_stock=0,
         )
-
         session.add_all([user, author, book])
+        session.commit()
+
+        # Lend the current book
+        current_lending: Lending = Lending.lend_book(
+            book=book,
+            user_id=user.id,
+            start_time=datetime.now(),
+            end_time=datetime.now() + timedelta(days=30),
+            session=session,
+        )
+
+        assert current_lending
+        session.add(current_lending)
         session.commit()
 
         monkeypatch.setattr(config, "JWT_SECRET_KEY", "my_sup3r_s3cret_k3y")
@@ -138,9 +107,14 @@ class TestLending:
         )
 
         headers = {"Authorization": f"Bearer {token}"}
+        payload = {
+            "start_time": (datetime.now() + timedelta(days=2)).isoformat(),
+            "end_time": (datetime.now() + timedelta(days=40)).isoformat(),
+        }
 
-        response = test_client.post(f"/lending/{book.id}", headers=headers)
+        response = test_client.post(f"/lending/{book.id}", json=payload, headers=headers)
 
+        # Current book already has a lending entry that conflicts with the previous start and end times
         assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
         assert response.json() == {
             "detail": {

@@ -168,20 +168,53 @@ class Lending(BaseModel):
     user: Mapped[User] = relationship(back_populates="current_lends")
     book: Mapped[Book] = relationship(back_populates="current_lends")
 
+    @classmethod
+    def lend_book(
+        cls: "Lending",
+        book: Book,
+        user_id: int,
+        start_time: datetime,
+        end_time: datetime,
+        session: Session,
+    ) -> "Lending":
+        """Lends a book to a user if it is available during a chosen timeframe
+        (between ``start_time`` and ``end_time``).
 
-@event.listens_for(Lending, "before_insert")
-def check_not_over_lending(mapper, session, instance):
-    query = (
-        select(Book.id, Book.total_stock, func.count(Lending.book_id))
-        .outerjoin(
-            Lending,
-            Lending.book_id == Book.id,
-        )
-        .where(
-            Book.id == instance.book_id,
-        )
-    )
-    _, total_stock, current_lendings = session.execute(query).one()
+        Each row in this table is linked to one physical book, this means that
+        counting rows isn't sufficient to check if there's available stock to lend.
 
-    if current_lendings >= total_stock:
-        raise LendingException()
+        The book needs to be available during the given dates:
+            * start_time < end_time <= any existing start_time
+            OR
+            * any existing end_time < start_time < end_time
+        """
+        query = select(Lending).where(
+            Lending.book_id == book.id,
+            ~or_(
+                and_(
+                    start_time <= Lending.start_time,
+                    end_time <= Lending.start_time,
+                ),
+                and_(
+                    start_time > Lending.end_time,
+                    end_time > Lending.end_time,
+                )
+            ),
+        )
+        conflicting_lendings: list[Lending] = session.execute(query).scalars().all()
+
+        if conflicting_lendings:
+            raise HTTPException(
+                status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
+                detail={"errors": f"Lending failed for {book.title}: not enough stock"},
+            )
+
+        row: Lending = Lending(
+            book_id=book.id,
+            user_id=user_id,
+            start_time=start_time,
+            end_time=end_time,
+        )
+        session.add(row)
+
+        return row
