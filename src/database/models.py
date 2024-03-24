@@ -184,19 +184,22 @@ class Lending(BaseModel):
     start_time: Mapped[datetime] = mapped_column(nullable=False)
     end_time: Mapped[datetime] = mapped_column(nullable=False)
 
-    is_active: Mapped[bool] = mapped_column(nullable=False)
-    restitution_time: Mapped[datetime] = mapped_column(nullable=True)
+    is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+    return_time: Mapped[datetime] = mapped_column(nullable=True)
 
     user: Mapped[User] = relationship(back_populates="current_lends")
     book: Mapped[Book] = relationship(back_populates="current_lends")
 
     @classmethod
     def get_or_404(
-        cls, lending_id: uuid.UUID, user_id, session: Session
-    ) -> Self | None:
-        query = select(Lending).where(
-            Lending.id == lending_id,
-            Lending.user_id == user_id,
+        cls,
+        lending_id: uuid.UUID,
+        user_id: uuid.UUID,
+        session: Session,
+    ) -> Self:
+        query = select(cls).where(
+            cls.id == lending_id,
+            cls.user_id == user_id,
         )
 
         lending = session.execute(query).scalar_one_or_none()
@@ -211,12 +214,12 @@ class Lending(BaseModel):
     @classmethod
     def get_all(
         cls,
-        filters: list[ColumnExpressionArgument],
+        filters: list[ColumnExpressionArgument[bool]],
         session: Session,
     ) -> Sequence[Self]:
         """Gets all lendings that fall under specified predicates (``filters``)."""
 
-        query = select(Lending).where(*filters)
+        query = select(cls).where(*filters)
 
         return session.execute(query).scalars().all()
 
@@ -242,6 +245,7 @@ class Lending(BaseModel):
         """
         query = select(Lending).where(
             Lending.book_id == book.id,
+            Lending.is_active.is_(True),
             ~or_(
                 and_(
                     start_time <= Lending.start_time,
