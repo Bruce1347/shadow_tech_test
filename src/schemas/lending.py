@@ -7,6 +7,8 @@ from datetime import datetime
 class LendingSchema(BaseModel):
     start_time: datetime
     end_time: datetime
+    is_active: bool = True
+
 
 class LendingDumpSchema(BaseModel):
     id: UUID

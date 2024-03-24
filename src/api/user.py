@@ -23,7 +23,7 @@ router = APIRouter(
 
 def get_logged_user(
     token: Annotated[
-        str, Depends(OAuth2PasswordBearer(tokenUrl="token", auto_error=False))
+        str, Depends(OAuth2PasswordBearer(tokenUrl="user/token", auto_error=False))
     ],
     session: Annotated[Session, Depends(main.database_connection)],
 ) -> User:
@@ -32,6 +32,9 @@ def get_logged_user(
         detail="Invalid credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+    if token is None:
+        raise unauthorized_exception
 
     try:
         payload = jwt.decode(token, config.JWT_SECRET_KEY)

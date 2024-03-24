@@ -1,23 +1,20 @@
 from sqlalchemy import (
     ForeignKey,
-    Integer,
     String,
     delete,
     select,
-    event,
-    func,
-    Connection,
     and_,
     or_,
+    ColumnExpressionArgument,
 )
-from sqlalchemy.orm import Mapped, Session, mapped_column, relationship, Mapper
+from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 from datetime import datetime
 from fastapi import HTTPException
 from http import HTTPStatus
 from typing import Self, Sequence
 
 
-from src.database.common import BaseModel, LendingException
+from src.database.common import BaseModel
 from src.schemas.books import AuthorSchema, BookSchema
 from src.schemas.user import UserSchema
 
@@ -175,8 +172,8 @@ class User(BaseModel):
 
 
 class Lending(BaseModel):
-    """Represents the lending of a book by a given user.
-    """
+    """Represents the lending of a book by a given user."""
+
     __tablename__ = "lending"
 
     id: Mapped[uuid.UUID] = mapped_column(default=uuid.uuid4, primary_key=True)
@@ -187,8 +184,41 @@ class Lending(BaseModel):
     start_time: Mapped[datetime] = mapped_column(nullable=False)
     end_time: Mapped[datetime] = mapped_column(nullable=False)
 
+    is_active: Mapped[bool] = mapped_column(nullable=False)
+    restitution_time: Mapped[datetime] = mapped_column(nullable=True)
+
     user: Mapped[User] = relationship(back_populates="current_lends")
     book: Mapped[Book] = relationship(back_populates="current_lends")
+
+    @classmethod
+    def get_or_404(
+        cls, lending_id: uuid.UUID, user_id, session: Session
+    ) -> Self | None:
+        query = select(Lending).where(
+            Lending.id == lending_id,
+            Lending.user_id == user_id,
+        )
+
+        lending = session.execute(query).scalar_one_or_none()
+
+        if not lending:
+            raise HTTPException(
+                status_code=HTTPStatus.NOT_FOUND,
+            )
+
+        return lending
+
+    @classmethod
+    def get_all(
+        cls,
+        filters: list[ColumnExpressionArgument],
+        session: Session,
+    ) -> Sequence[Self]:
+        """Gets all lendings that fall under specified predicates (``filters``)."""
+
+        query = select(Lending).where(*filters)
+
+        return session.execute(query).scalars().all()
 
     @classmethod
     def lend_book(
@@ -220,7 +250,7 @@ class Lending(BaseModel):
                 and_(
                     start_time > Lending.end_time,
                     end_time > Lending.end_time,
-                )
+                ),
             ),
         )
         conflicting_lendings: Sequence[Lending] = session.execute(query).scalars().all()

@@ -1,14 +1,14 @@
 from http import HTTPStatus
 from fastapi import APIRouter, Depends, HTTPException
 from src.api import main, config
-from src.database.common import LendingException
 from src.database.models import User, Lending, Book
 from src.schemas.lending import LendingDumpSchema, LendingSchema
 from typing import Annotated
 from src.api.user import get_logged_user
 from sqlalchemy.orm import Session
+from uuid import UUID
+from sqlalchemy import ColumnExpressionArgument
 from zoneinfo import ZoneInfo
-from datetime import datetime, timedelta
 
 router = APIRouter(
     prefix="/lending",
@@ -33,7 +33,7 @@ def reserve_book(
 
     if not book:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND)
-    
+
     tz = ZoneInfo(config.APP_TZ)
 
     # Add TZ to provided datetimes
@@ -50,6 +50,44 @@ def reserve_book(
         session=session,
     )
 
+    session.commit()
+
+    return LendingDumpSchema.model_validate(lending)
+
+
+@router.get("/me", status_code=int(HTTPStatus.OK))
+def get_my_lendings(
+    session: Annotated[Session, Depends(main.database_connection)],
+    logged_user: Annotated[User, Depends(get_logged_user)],
+) -> list[LendingDumpSchema]:
+    filters: list[ColumnExpressionArgument] = [
+        User.id == logged_user.id,
+    ]
+
+    return [
+        LendingDumpSchema.model_validate(lending)
+        for lending in Lending.get_all(filters, session)
+    ]
+
+
+@router.put("/me/{lending_id}", status_code=int(HTTPStatus.OK))
+def update_lending(
+    lending_id: UUID,
+    lending_payload: LendingSchema,
+    session: Annotated[Session, Depends(main.database_connection)],
+    logged_user: Annotated[User, Depends(get_logged_user)],
+) -> LendingDumpSchema:
+    lending: Lending = Lending.get_or_404(
+        lending_id,
+        logged_user.id,
+        session,
+    )
+
+    for field in LendingSchema.model_fields.keys():
+        new_field_value = getattr(lending_payload, field)
+        setattr(lending, field, new_field_value)
+
+    session.add(lending)
     session.commit()
 
     return LendingDumpSchema.model_validate(lending)
