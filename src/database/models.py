@@ -1,25 +1,24 @@
-from sqlalchemy import (
-    ForeignKey,
-    String,
-    delete,
-    select,
-    and_,
-    or_,
-    ColumnExpressionArgument,
-)
-from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
+import uuid
 from datetime import datetime
-from fastapi import HTTPException
 from http import HTTPStatus
 from typing import Self, Sequence
 
+from fastapi import HTTPException
+from passlib.context import CryptContext
+from sqlalchemy import (
+    ColumnExpressionArgument,
+    ForeignKey,
+    String,
+    and_,
+    delete,
+    or_,
+    select,
+)
+from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
 from src.database.common import BaseModel
 from src.schemas.books import AuthorSchema, BookSchema
 from src.schemas.user import UserSchema
-
-import uuid
-from passlib.context import CryptContext
 
 
 class Author(BaseModel):

@@ -1,12 +1,12 @@
 from http import HTTPStatus
-from fastapi import APIRouter, Depends, HTTPException
-from src.schemas.books import BookSchema, BookDumpSchema
-from src.database.models import Book
 from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from src.api import main
-
+from src.database.models import Book
+from src.schemas.books import BookDumpSchema, BookSchema
 
 router = APIRouter(
     prefix="/books",

@@ -1,14 +1,13 @@
 from copy import deepcopy
 from http import HTTPStatus
+from typing import Generator
 
 import pytest
-
-from src.database.models import Author
-from sqlalchemy import select
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from typing import Generator
+from src.database.models import Author
 
 
 class TestCreateAuthor:

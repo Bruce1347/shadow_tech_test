@@ -1,12 +1,14 @@
+from copy import deepcopy
 from http import HTTPStatus
+from typing import Generator
+from uuid import UUID
+
 import pytest
 from fastapi.testclient import TestClient
-from uuid import UUID
-from src.database.models import User
-from copy import deepcopy
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-from typing import Generator
+
+from src.database.models import User
 
 
 class TestCreateUser:

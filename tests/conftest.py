@@ -1,11 +1,12 @@
+from typing import Generator
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy.orm import scoped_session, Session
+from sqlalchemy.orm import Session, scoped_session
 
 from src.api.main import database_connection, init_api
 from src.database.common import BaseModel
-from typing import Generator
 
 
 @pytest.fixture(autouse=True)

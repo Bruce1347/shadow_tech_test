@@ -1,8 +1,11 @@
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
-from src.api import config
-from jose import jwt
 from typing import Any
+from zoneinfo import ZoneInfo
+
+from jose import jwt
+
+from src.api import config
+
 
 def create_access_token(data: dict[str, Any], expires_delta: int) -> str:
     to_encode = data.copy()

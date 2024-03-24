@@ -1,11 +1,12 @@
 from copy import deepcopy
 from http import HTTPStatus
-from typing import Any
-from fastapi.testclient import TestClient
-from src.database.models import Author, Book
-from sqlalchemy.orm import Session
+from typing import Any, Generator
+
 import pytest
-from typing import Generator
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
+
+from src.database.models import Author, Book
 
 
 class TestCreateBooks:
@@ -90,6 +91,7 @@ class TestCreateBooks:
 
         assert error_detail["loc"] == ["body", "title"]
         assert error_detail["msg"] == "Field required"
+
 
 class TestReadBooks:
     def test_get_book(
@@ -193,6 +195,7 @@ class TestReadBooks:
 
         assert len(response.json()) == 3
 
+
 class TestUpdateBooks:
     @pytest.fixture
     def update_payload(self) -> Generator[dict[str, str | int], None, None]:
@@ -284,7 +287,6 @@ class TestUpdateBooks:
 
         payload.pop(missing_field)
 
-        
         response = test_client.put(
             f"/books/{book.id}",
             json=payload,

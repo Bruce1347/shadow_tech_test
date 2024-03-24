@@ -1,10 +1,10 @@
+from typing import Any, Generator
+
 from fastapi import FastAPI
-from sqlalchemy import create_engine, Engine
+from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.api import config
-
-from typing import Any, Generator
 
 
 def create_db_connection(db_uri: str, **kwargs: dict[str, Any]) -> Engine:
@@ -40,7 +40,7 @@ def init_api() -> FastAPI:
     app: FastAPI = FastAPI()
 
     # Circular imports
-    from src.api import authors, books, user, lending
+    from src.api import authors, books, lending, user
 
     app.include_router(books.router)
     app.include_router(authors.router)
