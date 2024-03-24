@@ -34,7 +34,7 @@ def create_author(
     author_payload: AuthorSchema,
     session: Annotated[Session, Depends(main.database_connection)],
 ) -> AuthorDumpSchema:
-    author = Author.create_object(author_payload, session)
+    author = Author.create(author_payload, session)
 
     session.commit()
 

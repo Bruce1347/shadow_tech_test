@@ -35,7 +35,7 @@ def create_book(
 @router.get("/", status_code=int(HTTPStatus.OK))
 def get_books(
     session: Annotated[Session, Depends(main.database_connection)],
-):
+) -> list[BookDumpSchema]:
     books: list[Book] = Book.get_all(session)
 
     return [BookDumpSchema.model_validate(book) for book in books]

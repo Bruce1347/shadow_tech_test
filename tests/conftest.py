@@ -1,19 +1,21 @@
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import scoped_session
 
 from src.api.main import database_connection, init_api
 from src.database.common import BaseModel
+from typing import Generator
 
 
 @pytest.fixture(autouse=True)
-def app():
+def app() -> Generator[FastAPI, None, None]:
     app = init_api()
 
     yield app
 
 
-def get_db():
+def get_testing_db() -> Generator[scoped_session, None, None]:
     from src.api.main import session_factory
 
     session = scoped_session(session_factory)()
@@ -30,10 +32,10 @@ def create_db(request):
 
 
 @pytest.fixture(scope="function", autouse=True)
-def session(app, create_db):
-    app.dependency_overrides[database_connection] = get_db
+def session(app: FastAPI) -> Generator[scoped_session, None, None]:
+    app.dependency_overrides[database_connection] = get_testing_db
 
-    session = next(get_db())
+    session = next(get_testing_db())
 
     try:
         yield session
@@ -42,7 +44,7 @@ def session(app, create_db):
 
 
 @pytest.fixture
-def test_client(app):
+def test_client(app: FastAPI) -> Generator[TestClient, None, None]:
     client = TestClient(app)
 
     yield client

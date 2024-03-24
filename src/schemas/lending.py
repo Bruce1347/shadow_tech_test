@@ -5,6 +5,10 @@ from datetime import datetime
 
 
 class LendingSchema(BaseModel):
+    start_time: datetime
+    end_time: datetime
+
+class LendingDumpSchema(BaseModel):
     id: UUID
     book: BookDumpSchema
     user_id: UUID

@@ -58,7 +58,7 @@ def get_logged_user(
 def create_user(
     user_payload: UserCreationSchema,
     session: Annotated[Session, Depends(main.database_connection)],
-):
+) -> UserDumpSchema:
     user: User = User.create(user_payload, session)
 
     session.add(user)

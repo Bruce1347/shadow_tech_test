@@ -1,6 +1,20 @@
-from sqlalchemy import ForeignKey, Integer, String, delete, select, event, func
-from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
+from sqlalchemy import (
+    ForeignKey,
+    Integer,
+    String,
+    delete,
+    select,
+    event,
+    func,
+    Connection,
+    and_,
+    or_,
+)
+from sqlalchemy.orm import Mapped, Session, mapped_column, relationship, Mapper
 from datetime import datetime
+from fastapi import HTTPException
+from http import HTTPStatus
+from typing import Self, Sequence
 
 
 from src.database.common import BaseModel, LendingException
@@ -22,11 +36,15 @@ class Author(BaseModel):
     books: Mapped[list["Book"]] = relationship(back_populates="author")
 
     @classmethod
-    def exists(cls, author_id: int, session) -> bool:
-        return session.query(select(cls).where(cls.id == author_id).exists()).scalar()
+    def exists(cls, author_id: int, session: Session) -> bool:
+        res: bool = session.query(
+            select(cls).where(cls.id == author_id).exists()
+        ).scalar()
+
+        return res
 
     @classmethod
-    def get(cls, author_id: int, session: Session) -> "Author | None":
+    def get(cls, author_id: int, session: Session) -> "Self | None":
         return session.query(cls).filter(cls.id == author_id).first()
 
     @classmethod
@@ -42,11 +60,11 @@ class Author(BaseModel):
         return True
 
     @classmethod
-    def get_authors_list(cls, session: Session) -> list["Author"]:
+    def get_authors_list(cls, session: Session) -> list[Self]:
         return list(session.execute(select(cls)).scalars().fetchall())
 
     @classmethod
-    def create_object(cls, validated_data: AuthorSchema, session: Session):
+    def create(cls, validated_data: AuthorSchema, session: Session) -> Self:
         instance = cls(**validated_data.model_dump())
 
         session.add(instance)
@@ -65,8 +83,6 @@ class Book(BaseModel):
     author_id = mapped_column(ForeignKey("author.id"))
     author: Mapped[Author] = relationship(back_populates="books")
 
-    total_stock: Mapped[int] = mapped_column(Integer())
-
     current_lends: Mapped[list["Lending"]] = relationship(back_populates="book")
 
     @classmethod
@@ -78,7 +94,7 @@ class Book(BaseModel):
         return list(session.execute(select(cls)).scalars())
 
     @classmethod
-    def create(cls, validated_data: BookSchema, session: Session):
+    def create(cls, validated_data: BookSchema, session: Session) -> Self:
         instance = cls(**validated_data.model_dump())
 
         session.add(instance)
@@ -86,8 +102,12 @@ class Book(BaseModel):
         return instance
 
     @classmethod
-    def exists(cls, book_id: int, session) -> bool:
-        return session.query(select(cls).where(cls.id == book_id).exists()).scalar()
+    def exists(cls, book_id: int, session: Session) -> bool:
+        res: bool = session.query(
+            select(cls).where(cls.id == book_id).exists()
+        ).scalar()
+
+        return res
 
     @classmethod
     def delete(cls, book_id: int, session: Session) -> bool:
@@ -119,22 +139,22 @@ class User(BaseModel):
     current_lends: Mapped[list["Lending"]] = relationship(back_populates="user")
 
     @property
-    def password(self):
+    def password(self) -> str:
         return self.hashed_password
 
     @password.setter
-    def password(self, new_password):
+    def password(self, new_password: str) -> None:
         context = CryptContext(schemes=["bcrypt"])
         self.hashed_password = context.hash(new_password)
 
     @classmethod
-    def create(cls, validated_data: UserSchema, session: Session):
+    def create(cls, validated_data: UserSchema, session: Session) -> Self:
         instance = cls(**validated_data.model_dump())
         session.add(instance)
         return instance
 
     @classmethod
-    def get(cls, username: str, session: Session) -> "User | None":
+    def get(cls, username: str, session: Session) -> "Self | None":
         return session.execute(select(cls).where(cls.username == username)).scalar()
 
     @classmethod
@@ -155,6 +175,8 @@ class User(BaseModel):
 
 
 class Lending(BaseModel):
+    """Represents the lending of a book by a given user.
+    """
     __tablename__ = "lending"
 
     id: Mapped[uuid.UUID] = mapped_column(default=uuid.uuid4, primary_key=True)
@@ -170,13 +192,13 @@ class Lending(BaseModel):
 
     @classmethod
     def lend_book(
-        cls: "Lending",
+        cls,
         book: Book,
-        user_id: int,
+        user_id: uuid.UUID,
         start_time: datetime,
         end_time: datetime,
         session: Session,
-    ) -> "Lending":
+    ) -> Self:
         """Lends a book to a user if it is available during a chosen timeframe
         (between ``start_time`` and ``end_time``).
 
@@ -201,7 +223,7 @@ class Lending(BaseModel):
                 )
             ),
         )
-        conflicting_lendings: list[Lending] = session.execute(query).scalars().all()
+        conflicting_lendings: Sequence[Lending] = session.execute(query).scalars().all()
 
         if conflicting_lendings:
             raise HTTPException(
@@ -209,7 +231,7 @@ class Lending(BaseModel):
                 detail={"errors": f"Lending failed for {book.title}: not enough stock"},
             )
 
-        row: Lending = Lending(
+        row = cls(
             book_id=book.id,
             user_id=user_id,
             start_time=start_time,

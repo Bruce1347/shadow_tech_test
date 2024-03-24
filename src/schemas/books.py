@@ -15,7 +15,6 @@ class AuthorDumpSchema(AuthorSchema):
 class BookSchema(BaseModel):
     title: str
     author_id: int
-    total_stock: int | None = 0
 
     # Optional fields
     isbn: str | None = None

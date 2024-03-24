@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from src.authentication.utils import create_access_token
 from src.api import config
 from http import HTTPStatus
+from pytest import MonkeyPatch
 
 
 class TestLending:
@@ -13,8 +14,8 @@ class TestLending:
         self,
         test_client: TestClient,
         session: Session,
-        monkeypatch,
-    ):
+        monkeypatch: MonkeyPatch,
+    ) -> None:
         user: User = User(
             username="bruce",
             email="bruce@bruce.tld",
@@ -29,7 +30,6 @@ class TestLending:
         book: Book = Book(
             title="Leviathan Wakes",
             author=author,
-            total_stock=1,
         )
 
         session.add_all([user, author, book])
@@ -65,8 +65,8 @@ class TestLending:
         self,
         test_client: TestClient,
         session: Session,
-        monkeypatch,
-    ):
+        monkeypatch: MonkeyPatch,
+    ) -> None:
         user: User = User(
             username="bruce",
             email="bruce@bruce.tld",
@@ -81,7 +81,6 @@ class TestLending:
         book: Book = Book(
             title="Leviathan Wakes",
             author=author,
-            total_stock=0,
         )
         session.add_all([user, author, book])
         session.commit()

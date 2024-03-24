@@ -1,15 +1,13 @@
 from fastapi import FastAPI
-from sqlalchemy import create_engine
-from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy import create_engine, Engine
+from sqlalchemy.orm import Session, sessionmaker
 
 from src.api import config
 
+from typing import Any, Generator
 
-def create_db_connection(db_uri: str, connect_args=None):
-    kwargs = {
-        "echo": False,
-    }
 
+def create_db_connection(db_uri: str, **kwargs: dict[str, Any]) -> Engine:
     engine = create_engine(
         db_uri,
         **kwargs,
@@ -30,31 +28,16 @@ session_factory = sessionmaker(
 )
 
 
-def database_test_connection():
-    session = scoped_session(session_factory)()
-
-    def commit() -> None:
-        session.flush()
-
-    session.commit = commit
-
-    try:
-        yield session
-    finally:
-        breakpoint()
-
-
-def database_connection():
+def database_connection() -> Generator[Session, None, None]:
     session = session_factory()
-
     try:
         yield session
     finally:
         session.close()
 
 
-def init_api(*, db_config=None):
-    app = FastAPI()
+def init_api() -> FastAPI:
+    app: FastAPI = FastAPI()
 
     # Circular imports
     from src.api import authors, books, user, lending

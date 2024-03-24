@@ -5,11 +5,13 @@ from uuid import UUID
 from src.database.models import User
 from copy import deepcopy
 from sqlalchemy import select, func
+from sqlalchemy.orm import Session
+from typing import Generator
 
 
 class TestCreateUser:
     @pytest.fixture
-    def book_payload(self):
+    def book_payload(self) -> Generator[dict[str, str], None, None]:
         yield {
             "first_name": "Josephus",
             "last_name": "Miller",
@@ -23,8 +25,8 @@ class TestCreateUser:
         self,
         test_client: TestClient,
         book_payload: dict[str, str],
-        session,
-    ):
+        session: Session,
+    ) -> None:
         response = test_client.post("/user", json=book_payload)
 
         assert response.status_code == HTTPStatus.CREATED
@@ -61,8 +63,8 @@ class TestCreateUser:
         missing_field: str,
         test_client: TestClient,
         book_payload: dict[str, str],
-        session,
-    ):
+        session: Session,
+    ) -> None:
         payload = deepcopy(book_payload)
         payload.pop(missing_field)
 

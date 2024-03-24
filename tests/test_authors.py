@@ -5,11 +5,15 @@ import pytest
 
 from src.database.models import Author
 from sqlalchemy import select
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
+
+from typing import Generator
 
 
 class TestCreateAuthor:
     @pytest.fixture
-    def author_payload(self):
+    def author_payload(self) -> Generator[dict[str, int | str], None, None]:
         yield {
             "id": 1,
             "first_name": "James S.A.",
@@ -18,10 +22,9 @@ class TestCreateAuthor:
 
     def test_create(
         self,
-        test_client,
-        author_payload: dict[str, str],
-        session,
-    ):
+        test_client: TestClient,
+        author_payload: dict[str, int | str],
+    ) -> None:
         response = test_client.post(
             "/author/",
             json=author_payload,
@@ -37,8 +40,8 @@ class TestCreateAuthor:
 
     def test_create_no_payload(
         self,
-        test_client,
-    ):
+        test_client: TestClient,
+    ) -> None:
         response = test_client.post("/author/", json={})
 
         assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
@@ -67,11 +70,10 @@ class TestCreateAuthor:
     )
     def test_create_missing_field(
         self,
-        field_name,
-        test_client,
-        author_payload,
-        session,
-    ):
+        field_name: str,
+        test_client: TestClient,
+        author_payload: dict[str, int | str],
+    ) -> None:
         payload = deepcopy(author_payload)
 
         payload.pop(field_name)
@@ -98,9 +100,9 @@ class TestCreateAuthor:
 class TestReadAuthor:
     def test_get_author(
         self,
-        test_client,
-        session,
-    ):
+        test_client: TestClient,
+        session: Session,
+    ) -> None:
         author = Author(
             first_name="James S.A.",
             last_name="Corey",
@@ -122,9 +124,9 @@ class TestReadAuthor:
 
     def test_get_authors(
         self,
-        test_client,
-        session,
-    ):
+        test_client: TestClient,
+        session: Session,
+    ) -> None:
         james_corey = Author(
             first_name="James S.A.",
             last_name="Corey",
@@ -160,8 +162,8 @@ class TestReadAuthor:
 
     def test_get_author_not_exists(
         self,
-        test_client,
-    ):
+        test_client: TestClient,
+    ) -> None:
         # Database is empty, any id should return a 404
         response = test_client.get(
             "/author/1",
@@ -172,7 +174,7 @@ class TestReadAuthor:
 
 class TestUpdateAuthor:
     @pytest.fixture
-    def author_payload(self):
+    def author_payload(self) -> Generator[dict[str, int | str], None, None]:
         yield {
             "id": 1,
             "first_name": "James S.A.",
@@ -181,10 +183,10 @@ class TestUpdateAuthor:
 
     def test_update_author(
         self,
-        test_client,
-        session,
-        author_payload,
-    ):
+        test_client: TestClient,
+        session: Session,
+        author_payload: dict[str, int | str],
+    ) -> None:
         author = Author(
             first_name="James S.A.",
             last_name="Corey",
@@ -213,8 +215,9 @@ class TestUpdateAuthor:
 
         # Check the changed data has been properly persisted
         query = select(Author).filter(Author.id == author.id)
-        db_object = session.execute(query).scalar()
+        db_object = session.execute(query).scalars().one_or_none()
 
+        assert db_object is not None
         assert db_object.first_name == "James"
 
     @pytest.mark.parametrize(
@@ -223,11 +226,11 @@ class TestUpdateAuthor:
     )
     def test_update_author_missing_field(
         self,
-        field_name,
-        test_client,
-        session,
-        author_payload,
-    ):
+        field_name: str,
+        test_client: TestClient,
+        session: Session,
+        author_payload: dict[str, int | str],
+    ) -> None:
         author = Author(
             first_name="James S.A.",
             last_name="Corey",
@@ -257,7 +260,11 @@ class TestUpdateAuthor:
         assert error_detail["loc"] == ["body", field_name]
         assert error_detail["msg"] == "Field required"
 
-    def test_update_author_wrong_id(self, test_client, author_payload, session):
+    def test_update_author_wrong_id(
+        self,
+        test_client: TestClient,
+        author_payload: dict[str, str | int],
+    ) -> None:
         response = test_client.put(
             "/author/1",
             json=author_payload,
@@ -268,8 +275,8 @@ class TestUpdateAuthor:
 class TestDeleteAuthor:
     def test_delete_author_wrong_id(
         self,
-        test_client,
-    ):
+        test_client: TestClient,
+    ) -> None:
         response = test_client.delete(
             "/author/1",
         )
@@ -278,9 +285,9 @@ class TestDeleteAuthor:
 
     def test_delete_author(
         self,
-        test_client,
-        session,
-    ):
+        test_client: TestClient,
+        session: Session,
+    ) -> None:
         author = Author(
             first_name="James S.A.",
             last_name="Corey",
