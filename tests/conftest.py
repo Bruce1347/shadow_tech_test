@@ -1,7 +1,7 @@
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlalchemy.orm import scoped_session
+from sqlalchemy.orm import scoped_session, Session
 
 from src.api.main import database_connection, init_api
 from src.database.common import BaseModel
@@ -15,7 +15,7 @@ def app() -> Generator[FastAPI, None, None]:
     yield app
 
 
-def get_testing_db() -> Generator[scoped_session, None, None]:
+def get_testing_db() -> Generator[Session, None, None]:
     from src.api.main import session_factory
 
     session = scoped_session(session_factory)()
@@ -24,7 +24,7 @@ def get_testing_db() -> Generator[scoped_session, None, None]:
 
 
 @pytest.fixture(scope="function", autouse=True)
-def create_db(request):
+def create_db() -> None:
     from src.api.main import engine
 
     BaseModel.metadata.drop_all(bind=engine)
@@ -32,7 +32,7 @@ def create_db(request):
 
 
 @pytest.fixture(scope="function", autouse=True)
-def session(app: FastAPI) -> Generator[scoped_session, None, None]:
+def session(app: FastAPI) -> Generator[Session, None, None]:
     app.dependency_overrides[database_connection] = get_testing_db
 
     session = next(get_testing_db())
