@@ -4,6 +4,9 @@ version = "0.0.1"
 description = "Public Library Management API"
 authors = ["Kaci Adjou <adjou.kaci@gmail.com>"]
 readme = "README.md"
+packages = [
+    { include = "src" },
+]
 
 [tool.poetry.dependencies]
 python = "^3.12"

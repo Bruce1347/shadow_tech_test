@@ -1,0 +1,33 @@
+
+services:
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: books_mgmt_user
+      POSTGRES_PASSWORD: p4ssw0rd
+      POSTGRES_DB: books_mgmt
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    image: books-mgmt-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SQLALCHEMY_DATABASE_URI: postgresql://books_mgmt_user:p4ssw0rd@postgres/books_mgmt
+    ports:
+      - "8000:8000"
+
+  api-test:
+    image: books-mgmt-api
+    environment:
+      SQLALCHEMY_DATABASE_URI: sqlite:////home/app/test.db
+      PYTHONPATH: /home/app
+    entrypoint: ["/home/app/.local/bin/poetry", "run", "pytest"]
