@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from freezegun import freeze_time
 
 from src.api import config
 from src.authentication.utils import create_access_token
@@ -54,6 +55,54 @@ class TestLending:
 
         headers = {"Authorization": f"Bearer {token}"}
         payload = {
+            "start_time": (datetime.now()).isoformat(),
+            "end_time": (datetime.now() + timedelta(days=40)).isoformat(),
+        }
+
+        response = test_client.post(
+            f"/lending/{book.id}", json=payload, headers=headers
+        )
+
+        assert response.status_code == HTTPStatus.OK
+
+        query = select(Lending).where(
+            Lending.user_id == user.id,
+            Lending.book_id == book.id,
+        )
+
+        lending_db_object = session.execute(query).one_or_none()
+
+        assert lending_db_object is not None
+
+    def test_lend_book_in_the_future(
+        self,
+        test_client: TestClient,
+        session: Session,
+        monkeypatch: MonkeyPatch,
+    ) -> None:
+        user: User = User(
+            username="bruce",
+            email="bruce@bruce.tld",
+            password="h4xx0r",
+        )
+
+        author: Author = Author(
+            first_name="James S.A.",
+            last_name="Corey",
+        )
+
+        book: Book = Book(
+            title="Leviathan Wakes",
+            author=author,
+        )
+
+        session.add_all([user, author, book])
+        session.commit()
+
+        token = create_test_token(user, monkeypatch)
+
+        headers = {"Authorization": f"Bearer {token}"}
+        payload = {
             "start_time": (datetime.now() + timedelta(days=2)).isoformat(),
             "end_time": (datetime.now() + timedelta(days=40)).isoformat(),
         }
@@ -72,6 +121,16 @@ class TestLending:
         lending_db_object = session.execute(query).one_or_none()
 
         assert lending_db_object is not None
+
+        # Book is still available for lending since the created lending phase
+        # starts in two days.
+        session.refresh(book)
+        assert book.available
+
+        # Trick the current session with freezegun: the book shouldn't be available for lending
+        with freeze_time(datetime.now() + timedelta(days=10)):
+            session.refresh(book)
+            assert not book.available
 
     def test_lend_returned_book(
         self,

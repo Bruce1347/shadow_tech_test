@@ -15,6 +15,8 @@ from sqlalchemy import (
     select,
 )
 from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy import type_coerce, ColumnElement, Boolean
 
 from src.database.common import BaseModel
 from src.schemas.books import AuthorSchema, BookSchema
@@ -80,6 +82,31 @@ class Book(BaseModel):
     author: Mapped[Author] = relationship(back_populates="books")
 
     current_lends: Mapped[list["Lending"]] = relationship(back_populates="book")
+
+    @hybrid_property
+    def available(self) -> bool:
+        if not self.current_lends:
+            return True
+
+        now = datetime.now()
+
+        for lending in self.current_lends:
+            if lending.start_time <= now and now <= lending.end_time:
+                return False
+
+        return True
+
+    @available.expression
+    @classmethod
+    def available(cls) -> ColumnElement[bool]:
+        return type_coerce(
+            select(Lending.id)
+            .where(
+                Lending.start_time <= datetime.now(), Lending.end_time >= datetime.now()
+            )
+            .exists(),
+            Boolean,
+        )
 
     @classmethod
     def get(cls, book_id: int, session: Session) -> "Book | None":

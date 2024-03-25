@@ -25,7 +25,6 @@ class BookSchema(BaseModel):
 class BookDumpSchema(BookSchema):
     id: int
     author: AuthorDumpSchema
-    available: int = 0
-    borrowed: int = 0
+    available: bool
 
     model_config = ConfigDict(from_attributes=True)

@@ -50,8 +50,7 @@ class TestCreateBooks:
             },
             "author_id": author.id,
             "isbn": None,
-            "available": 0,
-            "borrowed": 0,
+            "available": True,
         }
 
     def test_create_with_malformed_payload(
@@ -132,8 +131,7 @@ class TestReadBooks:
             },
             "title": "Leviathan Wakes",
             "isbn": None,
-            "available": 0,
-            "borrowed": 0,
+            "available": True,
         }
 
     def test_get_book_wrong_id(
@@ -259,8 +257,7 @@ class TestUpdateBooks:
             },
             "title": "Caliban's War",
             "isbn": None,
-            "available": 0,
-            "borrowed": 0,
+            "available": True,
         }
 
     @pytest.mark.parametrize("missing_field", ["author_id", "title"])
